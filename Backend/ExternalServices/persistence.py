@@ -1,6 +1,6 @@
 from bson import ObjectId
 from datetime import datetime, timezone
-from Backend.database import (
+from Backend.ExternalServices.database import (
     users_collection,
     projects_collection,
     commits_collection,

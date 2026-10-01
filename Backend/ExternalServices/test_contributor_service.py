@@ -23,15 +23,15 @@ from unittest.mock import patch, MagicMock
 from bson import ObjectId
 from pymongo.errors import DuplicateKeyError
 
-from Backend.github_commits import (
+from Backend.ExternalServices.github_commits import (
     get_github_contributors,
     GitHubTokenMissingError,
     GitHubAuthError,
     GitHubRepoNotFoundError,
     GitHubAPIError,
 )
-from Backend.persistence import upsert_contributor, get_project_contributors
-from Backend.contributor_service import (
+from Backend.ExternalServices.persistence import upsert_contributor, get_project_contributors
+from Backend.ExternalServices.contributor_service import (
     sync_project_contributors,
     ProjectNotFoundError,
     ProjectRepoNotConfiguredError,
@@ -847,7 +847,7 @@ class TestContributorAPI:
 
     def _get_client(self):
         from fastapi.testclient import TestClient
-        from Backend.main import app
+        from Backend.ExternalServices.main import app
         return TestClient(app)
 
     @patch("Backend.main.ensure_indexes")

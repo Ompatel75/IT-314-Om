@@ -14,20 +14,20 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional
 
-from Backend.persistence import get_project, get_project_contributors
-from Backend.contributor_service import (
+from Backend.ExternalServices.persistence import get_project, get_project_contributors
+from Backend.ExternalServices.contributor_service import (
     sync_project_contributors,
     ProjectNotFoundError,
     ProjectRepoNotConfiguredError,
     RepoMismatchError,
 )
-from Backend.github_commits import (
+from Backend.ExternalServices.github_commits import (
     GitHubTokenMissingError,
     GitHubAuthError,
     GitHubRepoNotFoundError,
     GitHubAPIError,
 )
-from Backend.database import ensure_indexes
+from Backend.ExternalServices.database import ensure_indexes
 
 
 @asynccontextmanager
