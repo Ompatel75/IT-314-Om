@@ -14,14 +14,14 @@ Flow:
 
 from pymongo.errors import DuplicateKeyError
 
-from Backend.github_commits import (
+from Backend.ExternalServices.github_commits import (
     get_github_contributors,
     GitHubTokenMissingError,
     GitHubAuthError,
     GitHubRepoNotFoundError,
     GitHubAPIError,
 )
-from Backend.persistence import (
+from Backend.ExternalServices.persistence import (
     get_project,
     upsert_contributor,
     get_project_contributors,
