@@ -186,17 +186,27 @@ def get_project_commits(project_id):
 def upsert_commit(project_id, commit_data):
     """
     Insert a new commit or update an existing one.
-    Uniqueness is enforced on (projectId, sha).
+
+    Commit uniqueness is enforced by the database using the
+    compound key (projectId, sha).
+
+    In addition to the normalized GitHub commit fields, repository
+    and branch context are stored so each commit can be traced back
+    to the repository and branch from which it was ingested.
     """
     filter_query = {
         "projectId": to_object_id(project_id),
         "sha": commit_data["sha"],
     }
+
     update_doc = {
         "$set": {
             "projectId": to_object_id(project_id),
             "sha": commit_data["sha"],
-            "short_sha": commit_data.get("short_sha", commit_data["sha"][:7]),
+            "short_sha": commit_data.get(
+                "short_sha",
+                commit_data["sha"][:7],
+            ),
             "author": commit_data.get("author", "Unknown"),
             "github_username": commit_data.get("github_username"),
             "timestamp": commit_data.get("timestamp"),
@@ -204,11 +214,23 @@ def upsert_commit(project_id, commit_data):
             "additions": commit_data.get("additions", 0),
             "deletions": commit_data.get("deletions", 0),
             "total_changes": commit_data.get("total_changes", 0),
+
+            # Repository association
+            "repository": commit_data.get("repository"),
+            "repository_url": commit_data.get("repository_url"),
+
+            # Branch context
+            "branch": commit_data.get("branch"),
+            "default_branch": commit_data.get("default_branch"),
+
             "updated_at": datetime.now(timezone.utc),
         }
     }
+
     result = commits_collection.update_one(
-        filter_query, update_doc, upsert=True
+        filter_query,
+        update_doc,
+        upsert=True,
     )
 
     if result.upserted_id:
@@ -216,6 +238,7 @@ def upsert_commit(project_id, commit_data):
 
     document = commits_collection.find_one(filter_query)
     return str(document["_id"]) if document else None
+
 
 
 # --------------------------------------------------

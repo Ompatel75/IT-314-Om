@@ -4,8 +4,11 @@ from typing import Optional
 from urllib.parse import urlparse
 from dotenv import load_dotenv
 
-# Load GITHUB_TOKEN from .env file (located in the project root, one level above Backend/)
-load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), "..", ".env"))
+# Load GITHUB_TOKEN from the project root .env file.
+PROJECT_ROOT = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..", "..")
+)
+load_dotenv(dotenv_path=os.path.join(PROJECT_ROOT, ".env"))
 
 
 # ---------------------------------------------------------------------------
@@ -142,35 +145,84 @@ def _fetch_commits(
     max_commits: int,
 ) -> list[dict]:
     """
-    Fetches the list of commits from a branch.
+    Fetches the list of commits from a branch, with pagination.
+
+    Follows GitHub's per-page pagination to collect commits beyond
+    the single-page limit of 100.
 
     Returns:
         List of raw commit objects from GitHub API.
 
     Raises:
+        GitHubAuthError: If GitHub authentication fails.
         GitHubBranchNotFoundError: If the branch does not exist.
         GitHubAPIError: On other API failures.
     """
     url = f"https://api.github.com/repos/{owner}/{repo}/commits"
-    params = {"sha": branch, "per_page": min(max_commits, 100)}
 
-    try:
-        response = session.get(url, params=params, timeout=10)
-    except requests.exceptions.RequestException as exc:
-        raise GitHubAPIError(f"Network failure while fetching commits: {exc}") from exc
+    all_commits = []
+    page = 1
 
-    if response.status_code == 404:
-        raise GitHubBranchNotFoundError(
-            f"Branch '{branch}' not found in '{owner}/{repo}'."
-        )
-    if response.status_code == 403 and "rate limit" in response.text.lower():
-        raise GitHubAPIError("GitHub API rate limit exceeded. Try again later.")
-    if not response.ok:
-        raise GitHubAPIError(
-            f"GitHub API error {response.status_code} while fetching commits."
-        )
+    # Keep the page size constant so GitHub's pagination
+    # boundaries do not change between requests.
+    per_page = min(max_commits, 100)
 
-    return response.json()[:max_commits]
+    while len(all_commits) < max_commits:
+        params = {
+            "sha": branch,
+            "per_page": per_page,
+            "page": page,
+        }
+
+        try:
+            response = session.get(
+                url,
+                params=params,
+                timeout=10,
+            )
+        except requests.exceptions.RequestException as exc:
+            raise GitHubAPIError(
+                f"Network failure while fetching commits: {exc}"
+            ) from exc
+
+        if response.status_code == 401:
+            raise GitHubAuthError(
+                "GitHub authentication failed. Check your token."
+            )
+
+        if response.status_code == 404:
+            raise GitHubBranchNotFoundError(
+                f"Branch '{branch}' not found in '{owner}/{repo}'."
+            )
+
+        if (
+            response.status_code == 403
+            and "rate limit" in response.text.lower()
+        ):
+            raise GitHubAPIError(
+                "GitHub API rate limit exceeded. Try again later."
+            )
+
+        if not response.ok:
+            raise GitHubAPIError(
+                f"GitHub API error {response.status_code} "
+                "while fetching commits."
+            )
+
+        page_data = response.json()
+
+        if not page_data:
+            break
+
+        all_commits.extend(page_data)
+
+        # A partial page means there are no more commits.
+        if len(page_data) < per_page:
+            break
+
+        page += 1
+
+    return all_commits[:max_commits]
 
 
 def _fetch_commit_stats(session: requests.Session, owner: str, repo: str, sha: str) -> dict:
