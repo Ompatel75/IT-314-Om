@@ -1,24 +1,158 @@
 """
-FastAPI application entry-point.
+FastAPI Application — AI Software Project Health & Risk Analyzer
+-----------------------------------------------------------------
+Main API entry point combining Authentication and Contributor features.
 
 Start with:
     uvicorn Backend.main:app --reload
 """
-from fastapi import FastAPI
+
+from contextlib import asynccontextmanager
+from typing import Optional
+
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 
 from Backend.auth.router import router as auth_router
+from Backend.persistence import get_project, get_project_contributors
+
+try:
+    from Backend.database import ensure_indexes
+except ImportError:
+    def ensure_indexes():
+        """Fallback when database.py has not yet been merged with index helpers."""
+        pass
+
+try:
+    from Backend.externalservies.contributor_service import (
+        ProjectNotFoundError,
+        ProjectRepoNotConfiguredError,
+        RepoMismatchError,
+        sync_project_contributors,
+    )
+    # pyrefly: ignore [missing-import]
+    from Backend.externalservies.github_commits import (
+        GitHubAPIError,
+        
+        GitHubAuthError,
+        GitHubRepoNotFoundError,
+        GitHubTokenMissingError,
+    )
+except ImportError:
+    class ProjectNotFoundError(Exception): pass
+    class ProjectRepoNotConfiguredError(Exception): pass
+    class RepoMismatchError(Exception): pass
+    class GitHubTokenMissingError(Exception): pass
+    class GitHubAuthError(Exception): pass
+    class GitHubRepoNotFoundError(Exception): pass
+    class GitHubAPIError(Exception): pass
+
+    def sync_project_contributors(*args, **kwargs):
+        raise HTTPException(
+            status_code=501,
+            detail="Contributor service is not installed on this branch.",
+        )
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Application startup/shutdown lifecycle."""
+    ensure_indexes()
+    yield
+
 
 app = FastAPI(
     title="AI Software Project Health & Risk Analyzer",
     version="0.1.0",
     description="Backend API for analysing software project health and risk.",
+    lifespan=lifespan,
 )
 
-# Mount routers
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Restrict in production
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# ---------------------------------------------------------------------------
+# Routers
+# ---------------------------------------------------------------------------
+
 app.include_router(auth_router)
 
 
+# ---------------------------------------------------------------------------
+# Request models
+# ---------------------------------------------------------------------------
+
+class SyncContributorsRequest(BaseModel):
+    repo_url: Optional[str] = None
+
+
+# ---------------------------------------------------------------------------
+# Health check endpoints
+# ---------------------------------------------------------------------------
+
+@app.get("/api/health")
 @app.get("/health", tags=["Health"])
 def health_check():
-    """Simple liveness probe."""
-    return {"status": "ok"}
+    """Basic health check endpoint."""
+    return {"status": "healthy"}
+
+
+# ---------------------------------------------------------------------------
+# Contributor endpoints
+# ---------------------------------------------------------------------------
+
+@app.get("/api/projects/{project_id}/contributors", tags=["Contributors"])
+def get_contributors(project_id: str):
+    """
+    Retrieve stored contributors for a project.
+    """
+    project = get_project(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found.")
+    return get_project_contributors(project_id)
+
+
+@app.post("/api/projects/{project_id}/sync-contributors", tags=["Contributors"])
+def sync_contributors(project_id: str, request: SyncContributorsRequest):
+    """
+    Sync contributors from GitHub for the given project.
+
+    Uses the project's configured repository URL. If ``repo_url`` is
+    provided in the request body it is validated against the project's
+    stored configuration.
+    """
+    try:
+        result = sync_project_contributors(
+            project_id=project_id,
+            repo_url=request.repo_url,
+        )
+        return result
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except ProjectNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except ProjectRepoNotConfiguredError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except RepoMismatchError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except GitHubTokenMissingError:
+        raise HTTPException(
+            status_code=500,
+            detail="GitHub token is not configured on the server.",
+        )
+    except GitHubAuthError:
+        raise HTTPException(
+            status_code=401,
+            detail="GitHub authentication failed. Check the configured token.",
+        )
+    except GitHubRepoNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except GitHubAPIError as e:
+        raise HTTPException(status_code=502, detail=str(e))
