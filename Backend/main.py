@@ -15,44 +15,20 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from Backend.auth.router import router as auth_router
+from Backend.database import ensure_indexes
+from Backend.externalservies.contributor_service import (
+    ProjectNotFoundError,
+    ProjectRepoNotConfiguredError,
+    RepoMismatchError,
+    sync_project_contributors,
+)
+from Backend.externalservies.github_commits import (
+    GitHubAPIError,
+    GitHubAuthError,
+    GitHubRepoNotFoundError,
+    GitHubTokenMissingError,
+)
 from Backend.persistence import get_project, get_project_contributors
-
-try:
-    from Backend.database import ensure_indexes
-except ImportError:
-    def ensure_indexes():
-        """Fallback when database.py has not yet been merged with index helpers."""
-        pass
-
-try:
-    from Backend.externalservies.contributor_service import (
-        ProjectNotFoundError,
-        ProjectRepoNotConfiguredError,
-        RepoMismatchError,
-        sync_project_contributors,
-    )
-    # pyrefly: ignore [missing-import]
-    from Backend.externalservies.github_commits import (
-        GitHubAPIError,
-        
-        GitHubAuthError,
-        GitHubRepoNotFoundError,
-        GitHubTokenMissingError,
-    )
-except ImportError:
-    class ProjectNotFoundError(Exception): pass
-    class ProjectRepoNotConfiguredError(Exception): pass
-    class RepoMismatchError(Exception): pass
-    class GitHubTokenMissingError(Exception): pass
-    class GitHubAuthError(Exception): pass
-    class GitHubRepoNotFoundError(Exception): pass
-    class GitHubAPIError(Exception): pass
-
-    def sync_project_contributors(*args, **kwargs):
-        raise HTTPException(
-            status_code=501,
-            detail="Contributor service is not installed on this branch.",
-        )
 
 
 @asynccontextmanager

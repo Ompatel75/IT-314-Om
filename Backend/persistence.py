@@ -12,13 +12,8 @@ from Backend.database import (
     integration_credentials_collection,
     org_settings_collection,
     audit_logs_collection,
+    contributors_collection,
 )
-
-try:
-    from Backend.database import contributors_collection
-except ImportError:
-    from Backend.database import db
-    contributors_collection = db["contributors"]
 
 
 
@@ -43,6 +38,7 @@ def serialize_document(document):
     """
     Convert MongoDB values into JSON-serializable values.
     """
+
     if document is None:
         return None
 
