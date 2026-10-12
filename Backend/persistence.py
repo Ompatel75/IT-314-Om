@@ -16,6 +16,7 @@ from Backend.database import (
 )
 
 
+
 # --------------------------------------------------
 # Helper functions
 # --------------------------------------------------
@@ -79,8 +80,11 @@ def get_user(user_id):
 
 
 def get_user_by_email(email):
+    if not email:
+        return None
+    # Case-insensitive regex query for email search
     document = users_collection.find_one(
-        {"email": email}
+        {"email": {"$regex": f"^{email.strip()}$", "$options": "i"}}
     )
     return serialize_document(document)
 
@@ -103,6 +107,14 @@ def delete_user(user_id):
         {"_id": to_object_id(user_id)}
     )
     return result.deleted_count > 0
+
+
+def clear_users():
+    """Helper method to reset the database during tests."""
+    try:
+        users_collection.delete_many({})
+    except Exception:
+        pass
 
 
 # --------------------------------------------------

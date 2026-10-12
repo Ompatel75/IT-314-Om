@@ -1,33 +1,34 @@
 """
-FastAPI Application — Contributor Feature
--------------------------------------------
-API layer for the AI Software Project Health & Risk Analyzer.
+FastAPI Application — AI Software Project Health & Risk Analyzer
+-----------------------------------------------------------------
+Main API entry point combining Authentication and Contributor features.
 
-Contributor endpoints:
-    GET  /api/projects/{project_id}/contributors
-    POST /api/projects/{project_id}/sync-contributors
+Start with:
+    uvicorn Backend.main:app --reload
 """
 
 from contextlib import asynccontextmanager
+from typing import Optional
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import Optional
 
-from Backend.persistence import get_project, get_project_contributors
+from Backend.auth.router import router as auth_router
+from Backend.database import ensure_indexes
 from Backend.externalservies.contributor_service import (
-    sync_project_contributors,
     ProjectNotFoundError,
     ProjectRepoNotConfiguredError,
     RepoMismatchError,
+    sync_project_contributors,
 )
 from Backend.externalservies.github_commits import (
-    GitHubTokenMissingError,
+    GitHubAPIError,
     GitHubAuthError,
     GitHubRepoNotFoundError,
-    GitHubAPIError,
+    GitHubTokenMissingError,
 )
-from Backend.database import ensure_indexes
+from Backend.persistence import get_project, get_project_contributors
 
 
 @asynccontextmanager
@@ -40,6 +41,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="AI Software Project Health & Risk Analyzer",
     version="0.1.0",
+    description="Backend API for analysing software project health and risk.",
     lifespan=lifespan,
 )
 
@@ -51,6 +53,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# ---------------------------------------------------------------------------
+# Routers
+# ---------------------------------------------------------------------------
+
+app.include_router(auth_router)
+
 
 # ---------------------------------------------------------------------------
 # Request models
@@ -61,10 +69,11 @@ class SyncContributorsRequest(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# Health check
+# Health check endpoints
 # ---------------------------------------------------------------------------
 
 @app.get("/api/health")
+@app.get("/health", tags=["Health"])
 def health_check():
     """Basic health check endpoint."""
     return {"status": "healthy"}
@@ -74,7 +83,7 @@ def health_check():
 # Contributor endpoints
 # ---------------------------------------------------------------------------
 
-@app.get("/api/projects/{project_id}/contributors")
+@app.get("/api/projects/{project_id}/contributors", tags=["Contributors"])
 def get_contributors(project_id: str):
     """
     Retrieve stored contributors for a project.
@@ -85,12 +94,12 @@ def get_contributors(project_id: str):
     return get_project_contributors(project_id)
 
 
-@app.post("/api/projects/{project_id}/sync-contributors")
+@app.post("/api/projects/{project_id}/sync-contributors", tags=["Contributors"])
 def sync_contributors(project_id: str, request: SyncContributorsRequest):
     """
     Sync contributors from GitHub for the given project.
 
-    Uses the project's configured repository URL.  If ``repo_url`` is
+    Uses the project's configured repository URL. If ``repo_url`` is
     provided in the request body it is validated against the project's
     stored configuration.
     """
