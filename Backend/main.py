@@ -57,7 +57,10 @@ app.add_middleware(
 # Routers
 # ---------------------------------------------------------------------------
 
+from Backend.routers.project_router import router as project_router
+
 app.include_router(auth_router)
+app.include_router(project_router)
 
 
 # ---------------------------------------------------------------------------
