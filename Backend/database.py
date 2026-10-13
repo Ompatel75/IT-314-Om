@@ -22,10 +22,15 @@ if not MONGO_URI:
 
 MONGO_DATABASE = os.environ.get("MONGO_DATABASE", "project_health")
 
+# Only enable TLS when using a MongoDB Atlas SRV URI (mongodb+srv://).
+# Plain mongodb:// URIs (local instances) don't support TLS by default and
+# will fail with an SSL handshake error if tls=True is forced.
+_use_tls = MONGO_URI.startswith("mongodb+srv://")
+
 client = MongoClient(
     MONGO_URI,
-    tls=True,
-    tlsCAFile=certifi.where(),
+    tls=_use_tls,
+    tlsCAFile=certifi.where() if _use_tls else None,
     serverSelectionTimeoutMS=10000,
 )
 db = client[MONGO_DATABASE]
