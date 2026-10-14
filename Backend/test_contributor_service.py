@@ -49,6 +49,8 @@ SAMPLE_PROJECT_ID = str(ObjectId())
 SAMPLE_PROJECT = {
     "_id": SAMPLE_PROJECT_ID,
     "name": "Test Project",
+    "ownerId": "507f1f77bcf86cd799439011",
+    "members": [{"userId": "507f1f77bcf86cd799439011"}],
     "repo_url": SAMPLE_REPO_URL,
 }
 
@@ -845,14 +847,42 @@ class TestProjectVerification:
 class TestContributorAPI:
     """Tests for the FastAPI contributor endpoints."""
 
+    def setup_method(self):
+        from importlib import import_module
+        from unittest.mock import patch
+
+        module = import_module("Backend.routers.data_sync_router")
+        self._project_lookup_patch = patch.object(
+            module, "get_project", return_value=SAMPLE_PROJECT
+        )
+        self._project_lookup_patch.start()
+
+    def teardown_method(self):
+        patcher = getattr(self, "_project_lookup_patch", None)
+        if patcher:
+            patcher.stop()
+
+        from Backend.main import app
+        from Backend.auth.dependencies import get_current_user
+        app.dependency_overrides.pop(get_current_user, None)
+
     def _get_client(self):
         from fastapi.testclient import TestClient
         from Backend.main import app
-        return TestClient(app)
+        from Backend.auth.dependencies import get_current_user
+
+        app.dependency_overrides[get_current_user] = lambda: {
+            "_id": "507f1f77bcf86cd799439011",
+            "name": "Test Project Manager",
+            "email": "test-manager@example.com",
+            "role": "project_manager",
+        }
+        client = TestClient(app)
+        return client
 
     @patch("Backend.main.ensure_indexes")
-    @patch("Backend.main.get_project_contributors")
-    @patch("Backend.main.get_project")
+    @patch("Backend.routers.data_sync_router.get_project_contributors")
+    @patch("Backend.routers.data_sync_router.get_project")
     def test_get_contributors_success(
         self, mock_get_project, mock_get_contribs, mock_indexes
     ):
@@ -875,7 +905,7 @@ class TestContributorAPI:
         assert len(data) == 2
 
     @patch("Backend.main.ensure_indexes")
-    @patch("Backend.main.get_project")
+    @patch("Backend.routers.data_sync_router.get_project")
     def test_get_contributors_project_not_found(
         self, mock_get_project, mock_indexes
     ):
@@ -890,7 +920,7 @@ class TestContributorAPI:
         assert response.status_code == 404
 
     @patch("Backend.main.ensure_indexes")
-    @patch("Backend.main.sync_project_contributors")
+    @patch("Backend.routers.data_sync_router.sync_project_contributors")
     def test_sync_contributors_success(self, mock_sync, mock_indexes):
         """POST /api/projects/{id}/sync-contributors triggers sync."""
         mock_sync.return_value = {
@@ -921,7 +951,7 @@ class TestContributorAPI:
         mock_sync.assert_called_once()
 
     @patch("Backend.main.ensure_indexes")
-    @patch("Backend.main.sync_project_contributors")
+    @patch("Backend.routers.data_sync_router.sync_project_contributors")
     def test_sync_contributors_project_not_found(self, mock_sync, mock_indexes):
         """POST returns 404 when project does not exist."""
         mock_sync.side_effect = ProjectNotFoundError("Not found")
@@ -935,7 +965,7 @@ class TestContributorAPI:
         assert response.status_code == 404
 
     @patch("Backend.main.ensure_indexes")
-    @patch("Backend.main.sync_project_contributors")
+    @patch("Backend.routers.data_sync_router.sync_project_contributors")
     def test_sync_contributors_github_auth_error(self, mock_sync, mock_indexes):
         """POST returns 401 on GitHub auth failure."""
         mock_sync.side_effect = GitHubAuthError("Invalid token")

@@ -70,7 +70,7 @@ def signup(payload: SignupRequest):
         "name": payload.name,
         "email": payload.email,
         "password_hash": hash_password(payload.password),
-        "role": "member",
+        "role": "developer",
         "createdAt": now,
         "updatedAt": now,
     }
