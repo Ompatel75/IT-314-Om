@@ -34,6 +34,7 @@ from Backend.externalservies.github_commits import (
     GitHubTokenMissingError,
 )
 from Backend.persistence import get_project, get_project_contributors
+from Backend.persistence import DatabaseError
 from Backend.routers.project_router import (
     _get_user_id,
     _is_project_member,
@@ -117,8 +118,18 @@ def _map_github_errors(exc: Exception) -> HTTPException:
     if isinstance(exc, GitHubAPIError):
         return HTTPException(status_code=502, detail=str(exc))
 
-    # Let FastAPI's default handler handle unexpected exceptions.
-    raise exc
+    if isinstance(exc, DatabaseError):
+        return HTTPException(
+            status_code=503,
+            detail=str(exc),
+        )
+
+    # For any other unexpected exception, return a generic 500 without
+    # leaking internal implementation details to the client.
+    return HTTPException(
+        status_code=500,
+        detail="An unexpected server error occurred. Please try again later.",
+    )
 
 
 # ---------------------------------------------------------------------------

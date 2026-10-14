@@ -1,6 +1,7 @@
 import os
 import logging
 from pymongo import MongoClient
+from pymongo.errors import ConnectionFailure, ServerSelectionTimeoutError, ConfigurationError
 import certifi
 from dotenv import load_dotenv
 
@@ -27,12 +28,26 @@ MONGO_DATABASE = os.environ.get("MONGO_DATABASE", "project_health")
 # will fail with an SSL handshake error if tls=True is forced.
 _use_tls = MONGO_URI.startswith("mongodb+srv://")
 
-client = MongoClient(
-    MONGO_URI,
-    tls=_use_tls,
-    tlsCAFile=certifi.where() if _use_tls else None,
-    serverSelectionTimeoutMS=10000,
-)
+try:
+    client = MongoClient(
+        MONGO_URI,
+        tls=_use_tls,
+        tlsCAFile=certifi.where() if _use_tls else None,
+        serverSelectionTimeoutMS=10000,
+    )
+    # Trigger a lightweight command to validate connectivity at startup.
+    client.admin.command("ping")
+    logger.info("MongoDB connection established successfully.")
+except (ConnectionFailure, ServerSelectionTimeoutError) as exc:
+    raise EnvironmentError(
+        "Cannot reach MongoDB. Check that MONGO_URI is correct and the "
+        "database server is reachable."
+    ) from exc
+except ConfigurationError as exc:
+    raise EnvironmentError(
+        f"MongoDB configuration error: {exc}"
+    ) from exc
+
 db = client[MONGO_DATABASE]
 
 # ---------------------------------------------------------------------------
@@ -69,22 +84,26 @@ def ensure_indexes():
     Commits: unique compound index on (projectId, sha)
     to prevent duplicate commits within the same project.
     """
-    contributors_collection.create_index(
-        [("projectId", 1), ("github_username", 1)],
-        unique=True,
-        background=True,
-    )
-    commits_collection.create_index(
-        [("projectId", 1), ("sha", 1)],
-        unique=True,
-        background=True,
-    )
-    projects_collection.create_index(
-        [("ownerId", 1)],
-        background=True,
-    )
-    projects_collection.create_index(
-        [("members.userId", 1)],
-        background=True,
-    )
-    logger.info("Database indexes ensured.")
+    try:
+        contributors_collection.create_index(
+            [("projectId", 1), ("github_username", 1)],
+            unique=True,
+            background=True,
+        )
+        commits_collection.create_index(
+            [("projectId", 1), ("sha", 1)],
+            unique=True,
+            background=True,
+        )
+        projects_collection.create_index(
+            [("ownerId", 1)],
+            background=True,
+        )
+        projects_collection.create_index(
+            [("members.userId", 1)],
+            background=True,
+        )
+        logger.info("Database indexes ensured.")
+    except Exception as exc:  # pragma: no cover
+        # Non-fatal: indexes may already exist or be created on the next startup.
+        logger.warning("Could not ensure database indexes: %s", exc)

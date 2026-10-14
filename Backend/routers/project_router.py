@@ -20,6 +20,7 @@ from Backend.persistence import (
     get_project,
     get_projects_by_user,
     update_project,
+    DatabaseError,
 )
 from Backend.schemas.project_schemas import (
     CreateProjectRequest,
@@ -111,8 +112,12 @@ def create_project_endpoint(
         "updatedAt": now,
     }
 
-    inserted_id = create_project(project_data)
-    created_doc = get_project(inserted_id)
+    try:
+        inserted_id = create_project(project_data)
+        created_doc = get_project(inserted_id)
+    except DatabaseError as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
+
     if not created_doc:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -135,7 +140,10 @@ def list_projects_endpoint(
     Unowned legacy projects without verified ownership or membership are excluded.
     """
     user_id = _get_user_id(current_user)
-    projects = get_projects_by_user(user_id)
+    try:
+        projects = get_projects_by_user(user_id)
+    except DatabaseError as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
 
     # Strictly enforce verified ownership or membership
     user_projects = [
@@ -162,7 +170,11 @@ def get_project_endpoint(
     user_id = _get_user_id(current_user)
     oid = _parse_object_id(project_id)
 
-    project = get_project(str(oid))
+    try:
+        project = get_project(str(oid))
+    except DatabaseError as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
+
     if not project:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -197,7 +209,11 @@ def update_project_endpoint(
     user_id = _get_user_id(current_user)
     oid = _parse_object_id(project_id)
 
-    project = get_project(str(oid))
+    try:
+        project = get_project(str(oid))
+    except DatabaseError as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
+
     if not project:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -225,8 +241,12 @@ def update_project_endpoint(
 
     update_fields["updatedAt"] = datetime.now(timezone.utc)
 
-    update_project(str(oid), update_fields)
-    updated_doc = get_project(str(oid))
+    try:
+        update_project(str(oid), update_fields)
+        updated_doc = get_project(str(oid))
+    except DatabaseError as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
+
     if not updated_doc:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

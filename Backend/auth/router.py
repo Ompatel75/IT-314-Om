@@ -20,7 +20,7 @@ from Backend.auth.schemas import (
     UserOut,
 )
 from Backend.auth.security import create_access_token, hash_password, verify_password
-from Backend.persistence import create_user, get_user_by_email
+from Backend.persistence import create_user, get_user_by_email, DatabaseError
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -58,7 +58,11 @@ def signup(payload: SignupRequest):
     - **password**: Plain-text (hashed before storage; never stored in plain text)
     """
     # Reject duplicate emails
-    existing = get_user_by_email(payload.email)
+    try:
+        existing = get_user_by_email(payload.email)
+    except DatabaseError as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
+
     if existing:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -75,7 +79,10 @@ def signup(payload: SignupRequest):
         "updatedAt": now,
     }
 
-    user_id = create_user(user_doc)
+    try:
+        user_id = create_user(user_doc)
+    except DatabaseError as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
 
     access_token = create_access_token({"sub": user_id})
     user_doc["_id"] = user_id  # add id for the response
@@ -109,7 +116,11 @@ def login(payload: LoginRequest):
         headers={"WWW-Authenticate": "Bearer"},
     )
 
-    user = get_user_by_email(payload.email)
+    try:
+        user = get_user_by_email(payload.email)
+    except DatabaseError as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
+
     if not user:
         raise invalid_exc
 
