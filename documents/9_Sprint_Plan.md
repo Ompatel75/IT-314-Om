@@ -112,7 +112,7 @@ See `6_User_Stories_and_Acceptance_Criteria.md` and `7_Product_Backlog_Story_Poi
 
 ## 8. Sprint plan
 
-The following is a proposed 5-sprint sequence. Story point capacity must be adjusted to the actual team's availability; the 110-point backlog is not a promise that all work fits a fixed calendar.
+The following is a proposed 4-sprint sequence. Story point capacity must be adjusted to the actual team's availability; the 110-point backlog is not a promise that all work fits a fixed calendar.
 
 ### Sprint 1 — Foundation and project access
 **Goal:** Establish the secure project foundation and connect the source system.
@@ -121,28 +121,21 @@ The following is a proposed 5-sprint sequence. Story point capacity must be adju
 **Deliverables:** Authentication and role assignment; basic RBAC foundation; GitHub connection configuration; project creation and contributor mapping; initial commit ingestion; basic error/secret handling.  
 **Exit checks:** Users can sign in; authorized user can configure a project and connect a repository; commit data can be retrieved with clear failure handling.
 
-### Sprint 2 — Activity ingestion and sprint data
-**Goal:** Complete the primary project activity data pipeline.
+### Sprint 2 — Activity ingestion, metrics, and dashboard
+**Goal:** Complete the full project activity data pipeline and turn it into transparent project-health indicators.
 
-**Candidate stories:** US-02, US-03, US-04.  
-**Deliverables:** PR and issue retrieval; sprint/task data ingestion from configured GitHub Projects/milestones; synchronization timestamps; basic activity views.  
-**Exit checks:** Commit/PR/issue/sprint data is displayed for a test project; missing or unsupported source data is clearly labeled.
+**Candidate stories:** US-02, US-03, US-04, US-06, US-07, US-08, US-09, US-10, US-16.  
+**Deliverables:** PR and issue retrieval; sprint/task data ingestion from configured GitHub Projects/milestones; synchronization timestamps; basic activity views; bottleneck rules; activity-based workload imbalance indicator; stale-issue rules; indicative schedule-risk logic; configurable thresholds; dashboard summary.  
+**Exit checks:** Commit/PR/issue/sprint data is displayed for a test project; missing or unsupported source data is clearly labeled; each indicator can be traced to input metrics; thresholds can be adjusted by authorized users; insufficient data is handled; no automatic actions are taken.
 
-### Sprint 3 — Metrics, risks, and dashboard
-**Goal:** Turn source activity into transparent project-health indicators.
-
-**Candidate stories:** US-06, US-07, US-08, US-09, US-10, US-16.  
-**Deliverables:** Bottleneck rules, activity-based workload imbalance indicator, stale-issue rules, indicative schedule-risk logic, configurable thresholds, dashboard summary.  
-**Exit checks:** Each indicator can be traced to input metrics; thresholds can be adjusted by authorized users; insufficient data is handled; no automatic actions are taken.
-
-### Sprint 4 — Explanations, recommendations, and reports
+### Sprint 3 — Explanations, recommendations, and reports
 **Goal:** Add bounded GenAI assistance and report workflows.
 
 **Candidate stories:** US-11, US-12, US-13, US-14, US-15.  
 **Deliverables:** Grounded explanations; advisory recommendations; status report generation; scheduled dashboard/email/Slack delivery; PDF export.  
 **Exit checks:** Generated content references computed evidence; failed external delivery is visible; report/export respects permissions; dashboard remains available when optional channels are not configured.
 
-### Sprint 5 — Feedback, administration, hardening, and release
+### Sprint 4 — Feedback, administration, hardening, and release
 **Goal:** Complete user feedback and lifecycle controls, validate the integrated system, and prepare the demo.
 
 **Candidate stories:** US-17, US-18, US-21; remaining integration and quality work.  
@@ -220,15 +213,14 @@ Contribution practices:
 
 ## 14. Milestones
 
-| Milestone | Expected output |
-|---|---|
-| M1 | Scope, six stakeholders, elicitation plan, requirements, stories, backlog, and epics aligned |
-| M2 | Architecture and Sprint 1 foundation |
-| M3 | GitHub and sprint-data ingestion pipeline |
-| M4 | Metrics, risk indicators, and dashboard |
-| M5 | Explanations, recommendations, reports, delivery, and PDF export |
-| M6 | Access/appeal/audit completion, tests, and deployment |
-| M7 | Final documentation, presentation, and end-to-end demonstration |
+| Milestone | Sprint | Expected output |
+|---|---|---|
+| M1 | Pre-Sprint | Scope, six stakeholders, elicitation plan, requirements, stories, backlog, and epics aligned |
+| M2 | Sprint 1 | Architecture, authentication, RBAC foundation, GitHub connection, commit ingestion |
+| M3 | Sprint 2 | Full activity pipeline (PR, issues, sprint data), metrics, risk indicators, and dashboard |
+| M4 | Sprint 3 | Explanations, recommendations, reports, delivery, and PDF export |
+| M5 | Sprint 4 | Access/appeal/audit completion, integration/system tests, deployment, and documentation |
+| M6 | Post-Sprint 4 | Final documentation, presentation, and end-to-end demonstration |
 
 ## 15. Final MVP checklist
 

@@ -80,6 +80,17 @@ def _parse_github_url(repo_url: str) -> tuple[str, str]:
     return owner, repo
 
 
+def _extract_github_error(response: requests.Response, default_msg: str) -> str:
+    """Extract descriptive error message from GitHub API response if available."""
+    try:
+        data = response.json()
+        if isinstance(data, dict) and "message" in data:
+            return f"{default_msg} GitHub response: {data['message']}"
+    except Exception:
+        pass
+    return default_msg
+
+
 def _get_authenticated_session() -> requests.Session:
     """
     Creates a requests.Session pre-configured with the GitHub token.
@@ -90,6 +101,8 @@ def _get_authenticated_session() -> requests.Session:
     Raises:
         GitHubTokenMissingError: If GITHUB_TOKEN is not set.
     """
+    # Reload .env with override=True so token changes are picked up without restarting container
+    load_dotenv(dotenv_path=os.path.join(PROJECT_ROOT, ".env"), override=True)
     token = os.environ.get("GITHUB_TOKEN", "").strip()
     if not token:
         raise GitHubTokenMissingError(
@@ -101,6 +114,7 @@ def _get_authenticated_session() -> requests.Session:
         "Authorization": f"token {token}",
         "Accept": "application/vnd.github.v3+json",
         "X-GitHub-Api-Version": "2022-11-28",
+        "User-Agent": "Ai-Software-Project-Health-and-Risk-Analyzer",
     })
     return session
 
@@ -131,7 +145,10 @@ def _fetch_repo_info(session: requests.Session, owner: str, repo: str) -> dict:
         )
     if not response.ok:
         raise GitHubAPIError(
-            f"GitHub API error {response.status_code} while fetching repo info."
+            _extract_github_error(
+                response,
+                f"GitHub API error {response.status_code} while fetching repo info.",
+            )
         )
 
     return response.json()
@@ -205,8 +222,10 @@ def _fetch_commits(
 
         if not response.ok:
             raise GitHubAPIError(
-                f"GitHub API error {response.status_code} "
-                "while fetching commits."
+                _extract_github_error(
+                    response,
+                    f"GitHub API error {response.status_code} while fetching commits.",
+                )
             )
 
         page_data = response.json()
@@ -295,7 +314,10 @@ def _fetch_contributors(
             raise GitHubAPIError("GitHub API rate limit exceeded. Try again later.")
         if not response.ok:
             raise GitHubAPIError(
-                f"GitHub API error {response.status_code} while fetching contributors."
+                _extract_github_error(
+                    response,
+                    f"GitHub API error {response.status_code} while fetching contributors.",
+                )
             )
 
         page_data = response.json()
