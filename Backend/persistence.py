@@ -1,5 +1,7 @@
+import logging
 from bson import ObjectId
 from datetime import datetime, timezone
+from pymongo.errors import PyMongoError, ServerSelectionTimeoutError, ConnectionFailure
 from Backend.database import (
     users_collection,
     projects_collection,
@@ -15,6 +17,16 @@ from Backend.database import (
     contributors_collection,
 )
 
+logger = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# Application-level database exception
+# ---------------------------------------------------------------------------
+
+class DatabaseError(Exception):
+    """Raised when a database operation fails due to a connectivity or driver error."""
+    pass
 
 
 # --------------------------------------------------
@@ -68,45 +80,87 @@ def serialize_document(document):
 # --------------------------------------------------
 
 def create_user(user_data):
-    result = users_collection.insert_one(user_data)
-    return str(result.inserted_id)
+    try:
+        result = users_collection.insert_one(user_data)
+        return str(result.inserted_id)
+    except (ConnectionFailure, ServerSelectionTimeoutError) as exc:
+        logger.error("Database unreachable during create_user: %s", exc)
+        raise DatabaseError("Database is temporarily unavailable. Please try again later.") from exc
+    except PyMongoError as exc:
+        logger.error("Database error during create_user: %s", exc)
+        raise DatabaseError("A database error occurred while creating the user.") from exc
 
 
 def get_user(user_id):
-    document = users_collection.find_one(
-        {"_id": to_object_id(user_id)}
-    )
-    return serialize_document(document)
+    try:
+        document = users_collection.find_one(
+            {"_id": to_object_id(user_id)}
+        )
+        return serialize_document(document)
+    except (ConnectionFailure, ServerSelectionTimeoutError) as exc:
+        logger.error("Database unreachable during get_user: %s", exc)
+        raise DatabaseError("Database is temporarily unavailable. Please try again later.") from exc
+    except PyMongoError as exc:
+        logger.error("Database error during get_user: %s", exc)
+        raise DatabaseError("A database error occurred while retrieving the user.") from exc
 
 
 def get_user_by_email(email):
     if not email:
         return None
-    # Case-insensitive regex query for email search
-    document = users_collection.find_one(
-        {"email": {"$regex": f"^{email.strip()}$", "$options": "i"}}
-    )
-    return serialize_document(document)
+    try:
+        # Case-insensitive regex query for email search
+        document = users_collection.find_one(
+            {"email": {"$regex": f"^{email.strip()}$", "$options": "i"}}
+        )
+        return serialize_document(document)
+    except (ConnectionFailure, ServerSelectionTimeoutError) as exc:
+        logger.error("Database unreachable during get_user_by_email: %s", exc)
+        raise DatabaseError("Database is temporarily unavailable. Please try again later.") from exc
+    except PyMongoError as exc:
+        logger.error("Database error during get_user_by_email: %s", exc)
+        raise DatabaseError("A database error occurred while looking up the user.") from exc
 
 
 def get_users():
-    documents = users_collection.find()
-    return [serialize_document(doc) for doc in documents]
+    try:
+        documents = users_collection.find()
+        return [serialize_document(doc) for doc in documents]
+    except (ConnectionFailure, ServerSelectionTimeoutError) as exc:
+        logger.error("Database unreachable during get_users: %s", exc)
+        raise DatabaseError("Database is temporarily unavailable. Please try again later.") from exc
+    except PyMongoError as exc:
+        logger.error("Database error during get_users: %s", exc)
+        raise DatabaseError("A database error occurred while retrieving users.") from exc
 
 
 def update_user(user_id, update_data):
-    result = users_collection.update_one(
-        {"_id": to_object_id(user_id)},
-        {"$set": update_data}
-    )
-    return result.modified_count > 0
+    try:
+        result = users_collection.update_one(
+            {"_id": to_object_id(user_id)},
+            {"$set": update_data}
+        )
+        return result.modified_count > 0
+    except (ConnectionFailure, ServerSelectionTimeoutError) as exc:
+        logger.error("Database unreachable during update_user: %s", exc)
+        raise DatabaseError("Database is temporarily unavailable. Please try again later.") from exc
+    except PyMongoError as exc:
+        logger.error("Database error during update_user: %s", exc)
+        raise DatabaseError("A database error occurred while updating the user.") from exc
 
 
 def delete_user(user_id):
-    result = users_collection.delete_one(
-        {"_id": to_object_id(user_id)}
-    )
-    return result.deleted_count > 0
+    try:
+        result = users_collection.delete_one(
+            {"_id": to_object_id(user_id)}
+        )
+        return result.deleted_count > 0
+    except (ConnectionFailure, ServerSelectionTimeoutError) as exc:
+        logger.error("Database unreachable during delete_user: %s", exc)
+        raise DatabaseError("Database is temporarily unavailable. Please try again later.") from exc
+    except PyMongoError as exc:
+        logger.error("Database error during delete_user: %s", exc)
+        raise DatabaseError("A database error occurred while deleting the user.") from exc
 
 
 def clear_users():
@@ -122,43 +176,85 @@ def clear_users():
 # --------------------------------------------------
 
 def create_project(project_data):
-    result = projects_collection.insert_one(project_data)
-    return str(result.inserted_id)
+    try:
+        result = projects_collection.insert_one(project_data)
+        return str(result.inserted_id)
+    except (ConnectionFailure, ServerSelectionTimeoutError) as exc:
+        logger.error("Database unreachable during create_project: %s", exc)
+        raise DatabaseError("Database is temporarily unavailable. Please try again later.") from exc
+    except PyMongoError as exc:
+        logger.error("Database error during create_project: %s", exc)
+        raise DatabaseError("A database error occurred while creating the project.") from exc
 
 
 def get_project(project_id):
-    document = projects_collection.find_one(
-        {"_id": to_object_id(project_id)}
-    )
-    return serialize_document(document)
+    try:
+        document = projects_collection.find_one(
+            {"_id": to_object_id(project_id)}
+        )
+        return serialize_document(document)
+    except (ConnectionFailure, ServerSelectionTimeoutError) as exc:
+        logger.error("Database unreachable during get_project: %s", exc)
+        raise DatabaseError("Database is temporarily unavailable. Please try again later.") from exc
+    except PyMongoError as exc:
+        logger.error("Database error during get_project: %s", exc)
+        raise DatabaseError("A database error occurred while retrieving the project.") from exc
 
 
 def get_projects():
-    documents = projects_collection.find()
-    return [serialize_document(doc) for doc in documents]
+    try:
+        documents = projects_collection.find()
+        return [serialize_document(doc) for doc in documents]
+    except (ConnectionFailure, ServerSelectionTimeoutError) as exc:
+        logger.error("Database unreachable during get_projects: %s", exc)
+        raise DatabaseError("Database is temporarily unavailable. Please try again later.") from exc
+    except PyMongoError as exc:
+        logger.error("Database error during get_projects: %s", exc)
+        raise DatabaseError("A database error occurred while retrieving projects.") from exc
 
 
 def get_projects_by_user(user_id):
-    oid = to_object_id(user_id)
-    documents = projects_collection.find(
-        {"$or": [{"members.userId": oid}, {"ownerId": oid}]}
-    )
-    return [serialize_document(doc) for doc in documents]
+    try:
+        oid = to_object_id(user_id)
+        documents = projects_collection.find(
+            {"$or": [{"members.userId": oid}, {"ownerId": oid}]}
+        )
+        return [serialize_document(doc) for doc in documents]
+    except (ConnectionFailure, ServerSelectionTimeoutError) as exc:
+        logger.error("Database unreachable during get_projects_by_user: %s", exc)
+        raise DatabaseError("Database is temporarily unavailable. Please try again later.") from exc
+    except PyMongoError as exc:
+        logger.error("Database error during get_projects_by_user: %s", exc)
+        raise DatabaseError("A database error occurred while retrieving projects.") from exc
 
 
 def update_project(project_id, update_data):
-    result = projects_collection.update_one(
-        {"_id": to_object_id(project_id)},
-        {"$set": update_data}
-    )
-    return result.modified_count > 0
+    try:
+        result = projects_collection.update_one(
+            {"_id": to_object_id(project_id)},
+            {"$set": update_data}
+        )
+        return result.modified_count > 0
+    except (ConnectionFailure, ServerSelectionTimeoutError) as exc:
+        logger.error("Database unreachable during update_project: %s", exc)
+        raise DatabaseError("Database is temporarily unavailable. Please try again later.") from exc
+    except PyMongoError as exc:
+        logger.error("Database error during update_project: %s", exc)
+        raise DatabaseError("A database error occurred while updating the project.") from exc
 
 
 def delete_project(project_id):
-    result = projects_collection.delete_one(
-        {"_id": to_object_id(project_id)}
-    )
-    return result.deleted_count > 0
+    try:
+        result = projects_collection.delete_one(
+            {"_id": to_object_id(project_id)}
+        )
+        return result.deleted_count > 0
+    except (ConnectionFailure, ServerSelectionTimeoutError) as exc:
+        logger.error("Database unreachable during delete_project: %s", exc)
+        raise DatabaseError("Database is temporarily unavailable. Please try again later.") from exc
+    except PyMongoError as exc:
+        logger.error("Database error during delete_project: %s", exc)
+        raise DatabaseError("A database error occurred while deleting the project.") from exc
 
 
 # --------------------------------------------------

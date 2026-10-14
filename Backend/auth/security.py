@@ -3,6 +3,7 @@ Security utilities:
   - Password hashing / verification (bcrypt 4+/5+ native)
   - JWT access token creation / decoding
 """
+import logging
 import os
 from datetime import datetime, timedelta, timezone
 
@@ -11,6 +12,8 @@ from dotenv import load_dotenv
 from jose import jwt
 
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), "..", "..", ".env"))
+
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Password hashing  (uses bcrypt directly — passlib is NOT compatible with bcrypt 5.x)
@@ -41,8 +44,21 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 # JWT
 # ---------------------------------------------------------------------------
 
-_SECRET_KEY: str = os.environ.get("JWT_SECRET_KEY", "CHANGE_ME_in_production")
-_ALGORITHM: str = "HS256"
+_INSECURE_DEFAULT = "CHANGE_ME_in_production"
+_SECRET_KEY: str = os.environ.get("JWT_SECRET_KEY", "").strip()
+
+if not _SECRET_KEY:
+    raise EnvironmentError(
+        "JWT_SECRET_KEY environment variable is required. "
+        "Set a strong random value in your .env file."
+    )
+if _SECRET_KEY == _INSECURE_DEFAULT:
+    raise EnvironmentError(
+        "JWT_SECRET_KEY is set to the insecure default value. "
+        "Please replace it with a strong random secret in your .env file."
+    )
+
+_ALGORITHM: str = os.environ.get("JWT_ALGORITHM", "HS256")
 _ACCESS_TOKEN_EXPIRE_MINUTES: int = int(
     os.environ.get("ACCESS_TOKEN_EXPIRE_MINUTES", "60")
 )
