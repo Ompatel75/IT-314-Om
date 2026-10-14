@@ -14,6 +14,7 @@ from bson import ObjectId, errors
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from Backend.auth.dependencies import get_current_user
+from Backend.auth.roles import Role, require_role
 from Backend.persistence import (
     create_project,
     get_project,
@@ -84,7 +85,9 @@ def _is_project_member(project: dict, user_id: str) -> bool:
 )
 def create_project_endpoint(
     payload: CreateProjectRequest,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(
+        require_role(Role.ADMIN, Role.PROJECT_MANAGER)
+    ),
 ):
     """
     Create a new project. The authenticated caller becomes the project owner
@@ -183,7 +186,9 @@ def get_project_endpoint(
 def update_project_endpoint(
     project_id: str,
     payload: UpdateProjectRequest,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(
+        require_role(Role.ADMIN, Role.PROJECT_MANAGER)
+    ),
 ):
     """
     Update project details and configuration (name, description, repo_url, default_branch).
@@ -199,10 +204,13 @@ def update_project_endpoint(
             detail="Project not found.",
         )
 
-    if not _is_project_owner(project, user_id):
+    if (
+        current_user.get("role", "").strip().lower() != Role.ADMIN.value
+        and not _is_project_owner(project, user_id)
+    ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only the project owner can update project configuration.",
+            detail="Only admins or the project owner can update project configuration.",
         )
 
     update_fields = {}

@@ -56,6 +56,8 @@ SAMPLE_REPO_URL = (
 SAMPLE_PROJECT = {
     "_id": SAMPLE_PROJECT_ID,
     "name": "Test Project",
+    "ownerId": "507f1f77bcf86cd799439011",
+    "members": [{"userId": "507f1f77bcf86cd799439011"}],
     "repo_url": SAMPLE_REPO_URL,
 }
 
@@ -1028,18 +1030,44 @@ class TestCommitAPI:
     do not make real external requests or modify real data.
     """
 
+    def setup_method(self):
+        from importlib import import_module
+        from unittest.mock import patch
+
+        module = import_module("Backend.routers.data_sync_router")
+        self._project_lookup_patch = patch.object(
+            module, "get_project", return_value=SAMPLE_PROJECT
+        )
+        self._project_lookup_patch.start()
+
+    def teardown_method(self):
+        patcher = getattr(self, "_project_lookup_patch", None)
+        if patcher:
+            patcher.stop()
+
+        from Backend.main import app
+        from Backend.auth.dependencies import get_current_user
+        app.dependency_overrides.pop(get_current_user, None)
+
     def _get_client(self):
         """
         Create a FastAPI test client for the application.
         """
         from fastapi.testclient import TestClient
         from Backend.main import app
+        from Backend.auth.dependencies import get_current_user
 
+        app.dependency_overrides[get_current_user] = lambda: {
+            "_id": "507f1f77bcf86cd799439011",
+            "name": "Test Project Manager",
+            "email": "test-manager@example.com",
+            "role": "project_manager",
+        }
         return TestClient(app)
 
     @patch("Backend.main.ensure_indexes")
-    @patch("Backend.main.get_commits_for_project")
-    @patch("Backend.main.get_project")
+    @patch("Backend.routers.data_sync_router.get_commits_for_project")
+    @patch("Backend.routers.data_sync_router.get_project")
     def test_get_commits_success(
         self,
         mock_get_project,
@@ -1083,7 +1111,7 @@ class TestCommitAPI:
         )
 
     @patch("Backend.main.ensure_indexes")
-    @patch("Backend.main.get_project")
+    @patch("Backend.routers.data_sync_router.get_project")
     def test_get_commits_project_not_found(
         self,
         mock_get_project,
@@ -1104,7 +1132,7 @@ class TestCommitAPI:
         assert response.json()["detail"] == "Project not found."
 
     @patch("Backend.main.ensure_indexes")
-    @patch("Backend.main.sync_project_commits")
+    @patch("Backend.routers.data_sync_router.sync_project_commits")
     def test_sync_commits_success(
         self,
         mock_sync,
@@ -1158,7 +1186,7 @@ class TestCommitAPI:
         )
 
     @patch("Backend.main.ensure_indexes")
-    @patch("Backend.main.sync_project_commits")
+    @patch("Backend.routers.data_sync_router.sync_project_commits")
     def test_sync_commits_uses_default_request_values(
         self,
         mock_sync,
@@ -1195,7 +1223,7 @@ class TestCommitAPI:
         )
 
     @patch("Backend.main.ensure_indexes")
-    @patch("Backend.main.sync_project_commits")
+    @patch("Backend.routers.data_sync_router.sync_project_commits")
     def test_sync_commits_invalid_max_commits(
         self,
         mock_sync,
@@ -1221,7 +1249,7 @@ class TestCommitAPI:
         assert "max_commits" in response.json()["detail"]
 
     @patch("Backend.main.ensure_indexes")
-    @patch("Backend.main.sync_project_commits")
+    @patch("Backend.routers.data_sync_router.sync_project_commits")
     def test_sync_commits_project_not_found(
         self,
         mock_sync,
@@ -1244,7 +1272,7 @@ class TestCommitAPI:
         assert "Project not found" in response.json()["detail"]
 
     @patch("Backend.main.ensure_indexes")
-    @patch("Backend.main.sync_project_commits")
+    @patch("Backend.routers.data_sync_router.sync_project_commits")
     def test_sync_commits_repository_not_configured(
         self,
         mock_sync,
@@ -1266,7 +1294,7 @@ class TestCommitAPI:
         assert response.status_code == 400
 
     @patch("Backend.main.ensure_indexes")
-    @patch("Backend.main.sync_project_commits")
+    @patch("Backend.routers.data_sync_router.sync_project_commits")
     def test_sync_commits_repository_mismatch(
         self,
         mock_sync,
@@ -1294,7 +1322,7 @@ class TestCommitAPI:
         assert response.status_code == 400
 
     @patch("Backend.main.ensure_indexes")
-    @patch("Backend.main.sync_project_commits")
+    @patch("Backend.routers.data_sync_router.sync_project_commits")
     def test_sync_commits_github_auth_error(
         self,
         mock_sync,
@@ -1322,7 +1350,7 @@ class TestCommitAPI:
         )
 
     @patch("Backend.main.ensure_indexes")
-    @patch("Backend.main.sync_project_commits")
+    @patch("Backend.routers.data_sync_router.sync_project_commits")
     def test_sync_commits_repository_not_found(
         self,
         mock_sync,
@@ -1345,7 +1373,7 @@ class TestCommitAPI:
         assert "Repository not found" in response.json()["detail"]
 
     @patch("Backend.main.ensure_indexes")
-    @patch("Backend.main.sync_project_commits")
+    @patch("Backend.routers.data_sync_router.sync_project_commits")
     def test_sync_commits_branch_not_found(
         self,
         mock_sync,
@@ -1370,7 +1398,7 @@ class TestCommitAPI:
         assert "Branch not found" in response.json()["detail"]
 
     @patch("Backend.main.ensure_indexes")
-    @patch("Backend.main.sync_project_commits")
+    @patch("Backend.routers.data_sync_router.sync_project_commits")
     def test_sync_commits_github_api_error(
         self,
         mock_sync,
