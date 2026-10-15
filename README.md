@@ -76,7 +76,7 @@ The **AI Software Project Health & Risk Analyzer** combines deterministic metric
 ```text
                                  ┌─────────────────────────┐
                                  │   Frontend Application   │
-                                 │   (Next.js / Swagger)   │
+                                 │   (React.js / Swagger)  │
                                  └────────────┬────────────┘
                                               │ HTTP / JSON
                                               ▼
@@ -343,7 +343,7 @@ Sprint 3: Health Metric Engine & GenAI      [░░░░░░░░░░░�
   ├── LangGraph GenAI Analysis Pipeline     🔄 Next Sprint
   └── PDF Status Report Generation          🔄 Next Sprint
 Sprint 4: UI Dashboard & Final Deployment   [░░░░░░░░░░░░░░░░░░░░]   0% (Upcoming)
-  ├── Next.js Interactive Dashboard         🔄 Planned
+  ├── React.js Interactive Dashboard        🔄 Planned
   ├── Real-time Alerts & Slack Delivery     🔄 Planned
   └── Production Cloud Deployment           🔄 Planned
 ```
@@ -402,21 +402,21 @@ Ai-Software-Project-Health-and-Risk-Analyzer/
 
 ---
 
-## 👥 Team Members & Roles
+## 👥 Team Members & Contributions
 
 Developed by **Team OpenTirZ** for the Software Engineering Practicum:
 
-| Member | Engineering Role | Key Contributions & Ownership (Git History) |
+| Member | Engineering Role | Core Contributions |
 | :--- | :--- | :--- |
-| **Shah Varshil** (`svarshil56`) | **Lead Backend & DevOps Engineer** | Docker containerization & Compose orchestration, Data Sync Router, GitHub Telemetry ingestion bus, Release management |
-| **Tirth Patel** (`Tirth9978`) | **Database & Systems Architect** | MongoDB Atlas schema design, compound indexing strategy, External Services modularization, Sprint planning |
-| **Ramit Sherashiya** (`Ramit`) | **Security & Auth Lead / QA Engineer** | JWT authentication service (`/auth/*`), bcrypt password security, 60-test auth test suite, in-memory mock fixtures |
-| **Shivani Chaudhary** (`shivani`) | **Backend & App Security Engineer** | Database persistence layer (`persistence.py`), enterprise secret redaction logging filter, global exception handling |
-| **Darpan Sherathiya** (`Darpan0610`) | **Backend Data Pipeline Engineer** | Git commit ingestion and processing engine, Git telemetry normalization, Functional Requirements specification |
-| **Gaurav Rathod** (`Gaurav Rathod`) | **Backend API & Microservices Engineer** | Project Management CRUD APIs (`/api/projects`), Pydantic schema validation, User Stories & Acceptance Criteria |
-| **Prince Savaliya** (`Prince Savaliya`) | **Integration & API Engineer** | GitHub API client integration, contributor retrieval service with pagination & rate-limiting, Product Backlog management |
-| **Yagnik N.** (`Yagnik N.`) | **Access Control & Systems Analyst** | Role-Based Access Control (RBAC, 5 roles, route guards), Non-Functional (NFR) and Domain Requirements engineering |
-| **Om Patel** (`Om Patel`) | **API Integration & Requirements Specialist** | Initial GitHub commits service client, stakeholder elicitation, core application initialization |
+| **Shah Varshil** (`svarshil56`) | **Backend Lead & DevOps Engineer** | System architecture, Docker containerization & Compose orchestration, Data Synchronization Router (`/api/projects/{id}/sync-*`), GitHub Telemetry Ingestion, and deployment pipelines. |
+| **Vandit** | **Frontend Lead Developer** | Frontend architecture & user interface design using **React.js** (Authentication UI, Project Management Dashboard, Repository Connection, and Health telemetry views). |
+| **Tirth Patel** (`Tirth9978`) | **Database Architect & Backend Engineer** | MongoDB Atlas cluster design, database schema modeling, persistence layer implementation, compound indexing strategy `(projectId, sha)`, and backend code structure. |
+| **Ramit** (`ramit7707`) | **Authentication & Security Engineer** | Core JWT authentication system (`/auth/signup`, `/auth/login`, `/auth/me`), password hashing (Bcrypt), stateless session security, and 60+ automated test cases suite. |
+| **Shivani Chaudhary** (`shivani`) | **Security & Quality Assurance Engineer** | Enterprise hardening, automated secret masking and token redaction filter in logging, centralized exception handling, and error response sanitization. |
+| **Darpan Sherathiya** (`Darpan0610`) | **Backend Engineer (Git Analytics)** | Git commit ingestion pipeline, SHA-level deduplication logic, commit author parsing, and repository branch tracking. |
+| **Gaurav Rathod** (`Gaurav Rathod`) | **Backend Engineer (Project Management)** | Project lifecycle CRUD APIs (`/api/projects`), Pydantic schema validation, member ownership enforcement, and project management test suite. |
+| **Prince Savaliya** (`Prince Savaliya`) | **Backend Engineer (GitHub Services)** | Contributor retrieval service, GitHub REST API client with pagination & rate-limiting, and contributor-to-project mapping. |
+| **Yagnik N.** (`Yagnik N.`) | **Security, RBAC & Agile Process Lead** | Role-Based Access Control (RBAC) implementation, authorization route guards, stakeholder elicitation, user stories, and agile sprint documentation. |
 
 ---
 
